@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Byrock Hoof X-Ray Portal — Analytical Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --space-black: #030508;
+    --deep-space: #0a0f1a;
+    --medical-cyan: #00f0ff;
+    --hologram-blue: #38bdf8;
+    --alert-orange: #ff9f43;
+    --red-alert: #ff4757;
+    --sickbay-green: #2ed573;
+    --starlight: #e0e6ed;
+    --dim-grey: #57606f;
+    --panel-bg: rgba(10, 15, 26, 0.78);
+    --panel-border: rgba(0, 240, 255, 0.18);
+    --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.35), 0 0 40px rgba(0, 240, 255, 0.1);
+    --glow-green: 0 0 15px rgba(46, 213, 115, 0.4);
+    --glow-red: 0 0 20px rgba(255, 71, 87, 0.5), 0 0 50px rgba(255, 71, 87, 0.15);
+    --glow-orange: 0 0 15px rgba(255, 159, 67, 0.4);
+    --font-display: 'Orbitron', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--space-black);
+    color: var(--starlight);
+    height: 100vh;
+    overflow: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 30%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(56, 189, 248, 0.02) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(10, 15, 26, 1) 0%, rgba(3, 5, 8, 1) 100%);
+  }
+
+  .top-bar {
+    position: relative;
+    z-index: 10;
+    min-height: 56px;
+    background: linear-gradient(90deg, rgba(10,15,26,0.95) 0%, rgba(3,5,8,0.98) 100%);
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    flex-wrap: wrap;
+  }
+  .lcars-pill {
+    background: linear-gradient(135deg, var(--medical-cyan), var(--hologram-blue));
+    color: var(--space-black);
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: var(--glow-cyan);
+  }
+  .top-bar h1 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--medical-cyan);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    flex: 1;
+  }
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--sickbay-green);
+    letter-spacing: 1px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--sickbay-green);
+    box-shadow: 0 0 8px var(--sickbay-green);
+    animation: pulse-dot 2s infinite ease-in-out;
+  }
+  .status-dot.offline { background: var(--red-alert); box-shadow: 0 0 8px var(--red-alert); }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  .main-container {
+    display: flex;
+    height: calc(100vh - 56px);
+    position: relative;
+    z-index: 5;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--medical-cyan), transparent);
+    opacity: 0.4;
+  }
+
+  .panel-header {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--medical-cyan);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+  }
+  .panel-header .sub {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--dim-grey);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .severity-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+  .sev-btn {
+    flex: 1;
+    background: rgba(10, 15, 26, 0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--dim-grey);
+    padding: 7px 10px;
+    border-radius: 24px;
+    font-family: var(--font-display);
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    position: relative;
+    overflow: hidden;
+  }
+  .sev-btn:hover {
+    border-color: rgba(255,255,255,0.2);
+    color: var(--starlight);
+    transform: translateY(-1px);
+  }
+  .sev-btn.active {
+    color: var(--space-black);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .sev-btn.sev-normal.active { background: linear-gradient(135deg, var(--sickbay-green), #26b965); border-color: var(--sickbay-green); box-shadow: var(--glow-green); }
+  .sev-btn.sev-mild.active { background: linear-gradient(135deg, var(--alert-orange), #e8893a); border-color: var(--alert-orange); box-shadow: var(--glow-orange); }
+  .sev-btn.sev-moderate.active { background: linear-gradient(135deg, #ff6b81, #e05a6e); border-color: #ff6b81; box-shadow: 0 0 15px rgba(255, 107, 129, 0.4); }
+  .sev-btn.sev-severe.active { background: linear-gradient(135deg, var(--red-alert), #e03e4c); border-color: var(--red-alert); box-shadow: var(--glow-red); animation: alert-pulse 1.5s infinite ease-in-out; }
+  @keyframes alert-pulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(255, 71, 87, 0.4); }
+    50% { box-shadow: 0 0 25px rgba(255, 71, 87, 0.7); }
+  }
+
+  .image-viewer {
+    flex: 1;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+  }
+  .viewer-frame {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 100%;
+    transform-origin: center center;
+    transition: transform 0.1s;
+  }
+  .viewer-frame img {
+    display: block;
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: grab;
+    transition: filter 0.2s, transform 0.1s;
+  }
+  .image-controls {
+    position: absolute;
+    top: 10px; right: 10px;
+    display: flex;
+    gap: 5px;
+    z-index: 5;
+  }
+  .img-btn {
+    background: rgba(10, 15, 26, 0.9);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    color: var(--medical-cyan);
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    font-family: var(--font-mono);
+    backdrop-filter: blur(4px);
+  }
+  .img-btn:hover {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--medical-cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    transform: translateY(-1px);
+  }
+  .img-btn.active {
+    background: rgba(0, 240, 255, 0.16);
+    border-color: var(--medical-cyan);
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+  }
+
+  .landmark-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .landmark-point {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 10px currentColor, inset 0 0 6px rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .landmark-point::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--medical-cyan);
+    white-space: nowrap;
+    background: rgba(10,15,26,0.85);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,240,255,0.2);
+  }
+
+  .annotator-help {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    background: rgba(10, 15, 26, 0.92);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    z-index: 12;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--dim-grey);
+    display: none;
+  }
+  .annotator-help.active { display: block; }
+  .annotator-help strong { color: var(--medical-cyan); font-family: var(--font-display); font-size: 11px; }
+  .annotator-help .landmark-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .annotator-help .lm-tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 9px;
+    color: var(--starlight);
+  }
+  .annotator-help .lm-tag.done { background: rgba(46,213,115,0.15); border-color: rgba(46,213,115,0.4); color: var(--sickbay-green); }
+  .annotator-help .lm-tag.pending { background: rgba(255,159,67,0.15); border-color: rgba(255,159,67,0.4); color: var(--alert-orange); }
+
+  .measurement-panel {
+    margin-top: 10px;
+    flex-shrink: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(10, 15, 26, 0.5);
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0, 240, 255, 0.06);
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .measurement-panel h3 {
+    font-family: var(--font-display);
+    color: var(--medical-cyan);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .measurement-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    align-items: center;
+  }
+  .measurement-row:last-child { border-bottom: none; }
+  .measurement-row .metric-name { color: var(--dim-grey); }
+  .measurement-row .metric-value { color: var(--starlight); font-weight: 600; }
+  .measurement-row .metric-sev { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 6px; border-radius: 8px; }
+  .metric-sev.normal { color: var(--sickbay-green); background: rgba(46,213,115,0.1); }
+  .metric-sev.mild { color: var(--alert-orange); background: rgba(255,159,67,0.1); }
+  .metric-sev.moderate { color: #ff6b81; background: rgba(255,107,129,0.1); }
+  .metric-sev.severe { color: var(--red-alert); background: rgba(255,71,87,0.1); }
+
+  .analysis-card {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .analysis-card.normal { background: rgba(46,213,115,0.08); border-color: rgba(46,213,115,0.3); }
+  .analysis-card.mild { background: rgba(255,159,67,0.08); border-color: rgba(255,159,67,0.3); }
+  .analysis-card.moderate { background: rgba(255,107,129,0.08); border-color: rgba(255,107,129,0.3); }
+  .analysis-card.severe { background: rgba(255,71,87,0.08); border-color: rgba(255,71,87,0.3); }
+  .analysis-card h4 {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+  .analysis-card.normal h4 { color: var(--sickbay-green); }
+  .analysis-card.mild h4 { color: var(--alert-orange); }
+  .analysis-card.moderate h4 { color: #ff6b81; }
+  .analysis-card.severe h4 { color: var(--red-alert); }
+  .analysis-card .rec-list { margin: 0; padding: 0; list-style: none; }
+  .analysis-card .rec-list li { color: var(--starlight); line-height: 1.5; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
+  .analysis-card .score {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    float: right;
+  }
+
+  .selector-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(10, 15, 26, 0.5);
+    border-radius: 12px;
+    margin-top: 8px;
+    border: 1px solid rgba(0, 240, 255, 0.08);
+    flex-shrink: 0;
+    backdrop-filter: blur(8px);
+  }
+  .selector-area select {
+    background: rgba(10, 15, 26, 0.9);
+    border: 1px solid var(--panel-border);
+    color: var(--medical-cyan);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.05);
+    transition: all 0.3s;
+  }
+  .selector-area select:focus { outline: none; border-color: var(--medical-cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
+  .selector-area select option { background: var(--deep-space); color: var(--starlight); }
+  .selector-area label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--dim-grey);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(10, 15, 26, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 240, 255, 0.08);
+    flex-shrink: 0;
+    backdrop-filter: blur(8px);
+  }
+  .date-nav button {
+    background: rgba(10, 15, 26, 0.8);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    color: var(--medical-cyan);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s;
+    font-family: var(--font-mono);
+  }
+  .date-nav button:hover:not(:disabled) {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--medical-cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    transform: translateY(-1px);
+  }
+  .date-nav button:disabled { opacity: 0.2; cursor: not-allowed; border-color: rgba(255,255,255,0.05); color: var(--dim-grey); }
+  .date-display {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--starlight);
+    min-width: 160px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .date-meta {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--dim-grey);
+    text-align: center;
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  .timeline {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 5px 8px 18px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+  }
+  .timeline-dot {
+    width: 8px; height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .timeline-dot:hover {
+    background: rgba(0, 240, 255, 0.3);
+    border-color: var(--medical-cyan);
+    transform: scale(1.4);
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+  }
+  .timeline-dot.active {
+    background: var(--medical-cyan);
+    border-color: var(--medical-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+  .timeline-dot::after {
+    content: attr(data-date);
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--dim-grey);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .timeline-dot:hover::after, .timeline-dot.active::after { opacity: 1; }
+  .timeline-line {
+    width: 24px;
+    flex: 0 0 24px;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .scan-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(10, 15, 26, 0.5);
+    border-radius: 8px;
+    font-size: 10px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 240, 255, 0.06);
+    font-family: var(--font-mono);
+    backdrop-filter: blur(8px);
+  }
+  .scan-info div { color: var(--dim-grey); letter-spacing: 0.5px; }
+  .scan-info span { color: var(--medical-cyan); font-weight: 600; }
+
+  .reference-container {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.1);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.3);
+  }
+  .reference-container .xray-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    object-position: center center;
+    opacity: 0.92;
+    filter: contrast(1.1) brightness(0.95);
+  }
+  .corner-brackets {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .corner-brackets::before, .corner-brackets::after, .corner-brackets-bottom::before, .corner-brackets-bottom::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: var(--medical-cyan);
+    border-style: solid;
+    opacity: 0.4;
+  }
+  .corner-brackets::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .corner-brackets::after { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .corner-brackets-bottom { position: absolute; bottom: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 4; height: 20px; }
+  .corner-brackets-bottom::before { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .corner-brackets-bottom::after { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  .severity-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    z-index: 10;
+    transition: all 0.4s;
+    backdrop-filter: blur(8px);
+  }
+  .badge-normal { background: rgba(46, 213, 115, 0.15); color: var(--sickbay-green); border: 1px solid rgba(46, 213, 115, 0.4); box-shadow: 0 0 15px rgba(46, 213, 115, 0.2); }
+  .badge-mild { background: rgba(255, 159, 67, 0.15); color: var(--alert-orange); border: 1px solid rgba(255, 159, 67, 0.4); box-shadow: 0 0 15px rgba(255, 159, 67, 0.2); }
+  .badge-moderate { background: rgba(255, 107, 129, 0.15); color: #ff6b81; border: 1px solid rgba(255, 107, 129, 0.4); box-shadow: 0 0 15px rgba(255, 107, 129, 0.2); }
+  .badge-severe { background: rgba(255, 71, 87, 0.15); color: var(--red-alert); border: 1px solid rgba(255, 71, 87, 0.4); box-shadow: 0 0 20px rgba(255, 71, 87, 0.3); animation: alert-pulse 1.5s infinite ease-in-out; }
+
+  .upload-zone {
+    border: 2px dashed rgba(0, 240, 255, 0.15);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    color: var(--dim-grey);
+    cursor: pointer;
+    transition: all 0.4s;
+    font-family: var(--font-mono);
+  }
+  .upload-zone:hover {
+    border-color: var(--medical-cyan);
+    background: rgba(0, 240, 255, 0.03);
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+  }
+  .upload-zone .upload-icon { font-size: 36px; margin-bottom: 10px; filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3)); }
+  .upload-zone p { font-size: 13px; margin-bottom: 4px; color: var(--starlight); }
+  .upload-zone small { color: var(--dim-grey); font-size: 10px; letter-spacing: 0.5px; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 5, 8, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-card {
+    background: var(--deep-space);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 24px;
+    width: min(480px, 90vw);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0, 240, 255, 0.08);
+  }
+  .modal-card h2 {
+    font-family: var(--font-display);
+    color: var(--medical-cyan);
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+  .modal-card .form-row {
+    margin-bottom: 12px;
+  }
+  .modal-card label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--dim-grey);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .modal-card input, .modal-card select {
+    width: 100%;
+    background: rgba(10, 15, 26, 0.9);
+    border: 1px solid var(--panel-border);
+    color: var(--starlight);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .modal-card input:focus, .modal-card select:focus {
+    outline: none;
+    border-color: var(--medical-cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--medical-cyan), var(--hologram-blue));
+    color: var(--space-black);
+    border-color: var(--medical-cyan);
+    box-shadow: var(--glow-cyan);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--starlight);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--space-black); }
+  ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.15); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.3); }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .main-container { flex-direction: column; height: auto; min-height: calc(100vh - 56px); overflow: visible; }
+    .panel { min-height: 500px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="lcars-pill">Byrock</div>
+  <h1>Hoof X-Ray Portal — Analytical Edition</h1>
+  <div class="status-indicator" id="apiStatus">
+    <div class="status-dot offline" id="statusDot"></div>
+    <span id="statusText">OFFLINE</span>
+  </div>
+  <div class="selector-area" style="margin:0;flex-wrap:wrap;">
+    <label>Subject</label>
+    <select id="horseSelect"></select>
+    <button class="btn btn-primary" onclick="openModal('horseModal')">+ Horse</button>
+    <button class="btn btn-primary" onclick="openModal('scanModal')">+ Scan</button>
+  </div>
+</div>
+
+<div class="main-container">
+
+  <!-- LEFT PANEL: Reference + Analysis -->
+  <div class="panel panel-left">
+    <div class="panel-header">
+      <span>Reference Analysis</span>
+      <span class="sub">Select severity grade</span>
+    </div>
+
+    <div class="severity-bar">
+      <button class="sev-btn sev-normal active" data-sev="normal" onclick="setSeverity('normal')">● Normal</button>
+      <button class="sev-btn sev-mild" data-sev="mild" onclick="setSeverity('mild')">● Mild</button>
+      <button class="sev-btn sev-moderate" data-sev="moderate" onclick="setSeverity('moderate')">● Moderate</button>
+      <button class="sev-btn sev-severe" data-sev="severe" onclick="setSeverity('severe')">● Severe</button>
+    </div>
+
+    <div class="reference-container" id="refContainer">
+      <img class="xray-bg" id="refImage" src="assets/reference-images/reference-normal.jpg" alt="Reference">
+      <div class="corner-brackets"></div>
+      <div class="corner-brackets-bottom"></div>
+      <div class="severity-badge badge-normal" id="severityBadge">DIAGNOSTIC: NORMAL</div>
+    </div>
+
+    <!-- Computed Analysis Panel -->
+    <div class="analysis-card normal" id="analysisCard" style="display:none;">
+      <h4 id="analysisTitle">ANALYSIS RESULTS <span class="score" id="analysisScore">0</span></h4>
+      <ul class="rec-list" id="analysisRecs"></ul>
+    </div>
+
+    <!-- Measurements Panel -->
+    <div class="measurement-panel" id="measurementPanel" style="display:none;">
+      <h3>Computed Measurements</h3>
+      <div id="measurementList"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Patient Scan + Annotation -->
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span id="rightPanelTitle">Patient Scan</span>
+      <span class="sub" id="rightPanelMeta">Select a scan to view</span>
+    </div>
+
+    <div class="image-viewer" id="imageViewer">
+      <div class="image-controls">
+        <div class="img-btn" onclick="adjustZoom(0.1)" title="Zoom In">+</div>
+        <div class="img-btn" onclick="adjustZoom(-0.1)" title="Zoom Out">−</div>
+        <div class="img-btn" onclick="resetView()" title="Reset">⟲</div>
+        <div class="img-btn" onclick="adjustBrightness(10)" title="Brighter">☀</div>
+        <div class="img-btn" onclick="adjustBrightness(-10)" title="Darker">☾</div>
+        <div class="img-btn" id="annotateBtn" onclick="toggleAnnotate()" title="Annotate Landmarks">📍</div>
+        <div class="img-btn" onclick="runAnalysis()" title="Run Analysis">🔬</div>
+      </div>
+      <div id="viewerContent" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      </div>
+      <div class="landmark-overlay" id="landmarkOverlay"></div>
+      <div class="annotator-help" id="annotatorHelp">
+        <strong>Landmark Annotation Mode</strong> — Click on the image to place each required point.
+        <div class="landmark-list" id="landmarkList"></div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="submitLandmarks()">Submit & Analyze</button>
+          <button class="btn btn-secondary" onclick="clearLandmarks()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="selector-area">
+      <label>Hoof</label>
+      <select id="hoofSelect" onchange="changeHoof()">
+        <option value="FL">Front Left</option>
+        <option value="FR">Front Right</option>
+        <option value="HL">Hind Left</option>
+        <option value="HR">Hind Right</option>
+      </select>
+    </div>
+
+    <div class="date-nav">
+      <button id="prevDate" onclick="changeDate(-1)">←</button>
+      <div>
+        <div class="date-display" id="dateDisplay">No scans</div>
+        <div class="date-meta" id="dateMeta">-</div>
+      </div>
+      <button id="nextDate" onclick="changeDate(1)">→</button>
+    </div>
+
+    <div class="timeline" id="timeline"></div>
+
+    <div class="scan-info" id="scanInfo">
+      <div>View: <span id="infoView">-</span></div>
+      <div>Modality: <span id="infoModality">-</span></div>
+      <div>Description: <span id="infoDesc">-</span></div>
+      <div>Horse ID: <span id="infoId">-</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="horseModal">
+  <div class="modal-card">
+    <h2>Add New Horse</h2>
+    <div class="form-row">
+      <label>Name</label>
+      <input type="text" id="newHorseName" placeholder="e.g. Dutchess of Hazelbank">
+    </div>
+    <div class="form-row">
+      <label>Owner</label>
+      <input type="text" id="newHorseOwner" placeholder="e.g. Freedom Farm">
+    </div>
+    <div class="form-row">
+      <label>Breed</label>
+      <input type="text" id="newHorseBreed" placeholder="e.g. Thoroughbred">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('horseModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createHorse()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="scanModal">
+  <div class="modal-card">
+    <h2>Upload New Scan</h2>
+    <div class="form-row">
+      <label>Horse</label>
+      <select id="scanHorseSelect"></select>
+    </div>
+    <div class="form-row">
+      <label>Hoof</label>
+      <select id="scanHoofSelect">
+        <option value="FL">Front Left</option>
+        <option value="FR">Front Right</option>
+        <option value="HL">Hind Left</option>
+        <option value="HR">Hind Right</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Date</label>
+      <input type="date" id="scanDate">
+    </div>
+    <div class="form-row">
+      <label>View</label>
+      <select id="scanView">
+        <option value="Lateral">Lateral</option>
+        <option value="DP">DP</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Modality</label>
+      <input type="text" id="scanModality" placeholder="e.g. VENOGRAM, DX">
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <input type="text" id="scanDesc" placeholder="e.g. Right Fore Foot Lateral">
+    </div>
+    <div class="form-row">
+      <label>File</label>
+      <input type="file" id="scanFile" accept=".jpg,.jpeg,.png,.dcm">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('scanModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createScan()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────── Configuration ─────────────────────────────
+const API_BASE = 'http://localhost:8000';
+const LANDMARK_NAMES = [
+  { id: 'coronary_band', label: 'Coronary Band', color: '#00f0ff' },
+  { id: 'toe_tip', label: 'Toe Tip', color: '#ff4757' },
+  { id: 'extensor_process', label: 'Extensor Process', color: '#2ed573' },
+  { id: 'p3_tip', label: 'P3 Tip', color: '#ff4757' },
+  { id: 'p3_heel', label: 'P3 Heel', color: '#ff9f43' },
+  { id: 'toe_ground', label: 'Toe Ground', color: '#38bdf8' },
+  { id: 'heel_ground', label: 'Heel Ground', color: '#38bdf8' },
+  { id: 'p2_pastern_top', label: 'Pastern Top', color: '#2ed573' },
+  { id: 'p2_pastern_bottom', label: 'Pastern Bottom', color: '#2ed573' }
+];
+const REF_IMAGES = {
+  normal: 'assets/reference-images/reference-normal.jpg',
+  mild: 'assets/reference-images/reference-mild.jpg',
+  moderate: 'assets/reference-images/reference-moderate.jpg',
+  severe: 'assets/reference-images/reference-severe.jpg'
+};
+
+// ───────────────────────────── State ─────────────────────────────
+let horses = [];
+let currentHorseId = null;
+let currentHoof = 'FR';
+let currentScans = [];
+let currentScanIndex = 0;
+let currentSeverity = 'normal';
+let zoom = 1, brightness = 100, panX = 0, panY = 0;
+let isDragging = false, startX, startY;
+let annotateMode = false;
+let currentLandmarks = [];
+let apiOnline = false;
+
+// ───────────────────────────── API Helpers ─────────────────────────────
+async function api(path, opts = {}) {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('API error:', e);
+    return null;
+  }
+}
+
+async function checkApi() {
+  const data = await api('/api/health');
+  apiOnline = !!data;
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  if (apiOnline) {
+    dot.classList.remove('offline');
+    txt.textContent = 'SYSTEM ONLINE';
+    txt.style.color = 'var(--sickbay-green)';
+  } else {
+    dot.classList.add('offline');
+    txt.textContent = 'OFFLINE';
+    txt.style.color = 'var(--red-alert)';
+  }
+}
+
+// ───────────────────────────── Data Loading ─────────────────────────────
+async function loadHorses() {
+  const data = await api('/api/horses');
+  if (!data) return;
+  horses = data;
+  const sel = document.getElementById('horseSelect');
+  const scanSel = document.getElementById('scanHorseSelect');
+  sel.innerHTML = '';
+  scanSel.innerHTML = '';
+  horses.forEach(h => {
+    const opt = document.createElement('option');
+    opt.value = h.id;
+    opt.textContent = h.name;
+    sel.appendChild(opt);
+    const opt2 = document.createElement('option');
+    opt2.value = h.id;
+    opt2.textContent = h.name;
+    scanSel.appendChild(opt2);
+  });
+  if (horses.length > 0) {
+    currentHorseId = horses[0].id;
+    sel.value = currentHorseId;
+    await loadScans();
+  }
+}
+
+async function loadScans() {
+  if (!currentHorseId) return;
+  const data = await api(`/api/scans?horse_id=${currentHorseId}&hoof=${currentHoof}`);
+  currentScans = data || [];
+  currentScanIndex = 0;
+  renderTimeline();
+  renderScan();
+}
+
+// ───────────────────────────── UI Rendering ─────────────────────────────
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  currentScans.forEach((s, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'timeline-dot' + (i === currentScanIndex ? ' active' : '');
+    const d = new Date(s.scan_date);
+    dot.dataset.date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    dot.onclick = () => { currentScanIndex = i; renderScan(); };
+    tl.appendChild(dot);
+    if (i < currentScans.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'timeline-line';
+      tl.appendChild(line);
+    }
+  });
+}
+
+function renderScan() {
+  const viewer = document.getElementById('viewerContent');
+  const scan = currentScans[currentScanIndex];
+  document.getElementById('prevDate').disabled = currentScanIndex === 0;
+  document.getElementById('nextDate').disabled = currentScanIndex >= currentScans.length - 1;
+
+  if (!scan) {
+    document.getElementById('dateDisplay').textContent = 'No scans';
+    document.getElementById('dateMeta').textContent = `${currentHoof} hoof`;
+    document.getElementById('infoView').textContent = '-';
+    document.getElementById('infoModality').textContent = '-';
+    document.getElementById('infoDesc').textContent = 'No scan imported for this hoof';
+    document.getElementById('infoId').textContent = currentHorseId || '-';
+    document.getElementById('rightPanelTitle').textContent = 'Patient Scan';
+    document.getElementById('rightPanelMeta').textContent = 'Select a scan to view';
+    viewer.innerHTML = '<div class="upload-zone"><div class="upload-icon">🩻</div><p>No scan available for this hoof</p><small>Upload a scan using the + Scan button</small></div>';
+    clearLandmarks();
+    hideAnalysis();
+    return;
+  }
+
+  const d = new Date(scan.scan_date);
+  document.getElementById('dateDisplay').textContent = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('dateMeta').textContent = `Scan ${currentScanIndex + 1} of ${currentScans.length}`;
+  document.getElementById('infoView').textContent = scan.view;
+  document.getElementById('infoModality').textContent = scan.modality || '-';
+  document.getElementById('infoDesc').textContent = scan.description || '-';
+  document.getElementById('infoId').textContent = (horses.find(h => h.id === scan.horse_id)?.name || scan.horse_id);
+  document.getElementById('rightPanelTitle').textContent = (horses.find(h => h.id === scan.horse_id)?.name || 'Patient');
+  document.getElementById('rightPanelMeta').textContent = scan.description || `${scan.hoof} ${scan.view}`;
+
+  viewer.innerHTML = '';
+  const frame = document.createElement('div');
+  frame.id = 'viewerFrame';
+  frame.className = 'viewer-frame';
+  const img = document.createElement('img');
+  img.id = 'viewerImage';
+  img.src = scan.image_url || scan.imageSrc || '';
+  img.alt = scan.description || 'Scan';
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = '100%';
+  img.style.objectFit = 'contain';
+  img.style.cursor = 'grab';
+  frame.appendChild(img);
+  viewer.appendChild(frame);
+  resetView();
+
+  // Load existing landmarks if any
+  loadScanLandmarks(scan.id);
+  hideAnalysis();
+  renderTimeline();
+}
+
+function hideAnalysis() {
+  document.getElementById('analysisCard').style.display = 'none';
+  document.getElementById('measurementPanel').style.display = 'none';
+}
+
+async function loadScanLandmarks(scanId) {
+  const data = await api(`/api/scans/${scanId}/landmarks`);
+  if (!data) { currentLandmarks = []; renderLandmarks(); return; }
+  currentLandmarks = data.map(l => ({ name: l.name, x: l.x, y: l.y }));
+  renderLandmarks();
+  // If we have landmarks, also load measurements
+  const measurements = await api(`/api/scans/${scanId}/measurements`);
+  const analysis = await api(`/api/scans/${scanId}/analysis`).catch(() => null);
+  if (measurements && measurements.length) displayMeasurements(measurements);
+  if (analysis) displayAnalysis(analysis);
+}
+
+// ───────────────────────────── Viewer Controls ─────────────────────────────
+function adjustZoom(delta) { zoom = Math.max(0.5, Math.min(3, zoom + delta)); applyTransform(); }
+function adjustBrightness(delta) { brightness = Math.max(50, Math.min(150, brightness + delta)); applyTransform(); }
+function resetView() { zoom = 1; brightness = 100; panX = 0; panY = 0; applyTransform(); }
+function applyTransform() {
+  const frame = document.getElementById('viewerFrame');
+  const img = document.getElementById('viewerImage');
+  if (frame) frame.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  if (img) img.style.filter = `brightness(${brightness}%)`;
+}
+
+const viewer = document.getElementById('imageViewer');
+viewer.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.img-btn')) return;
+  if (annotateMode) { handleAnnotateClick(e); return; }
+  isDragging = true;
+  startX = e.clientX - panX;
+  startY = e.clientY - panY;
+  viewer.style.cursor = 'grabbing';
+});
+viewer.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  panX = e.clientX - startX;
+  panY = e.clientY - startY;
+  applyTransform();
+});
+viewer.addEventListener('mouseup', () => { isDragging = false; viewer.style.cursor = 'default'; });
+viewer.addEventListener('mouseleave', () => { isDragging = false; viewer.style.cursor = 'default'; });
+
+// ───────────────────────────── Landmark Annotation ─────────────────────────────
+function toggleAnnotate() {
+  annotateMode = !annotateMode;
+  const btn = document.getElementById('annotateBtn');
+  const help = document.getElementById('annotatorHelp');
+  const overlay = document.getElementById('landmarkOverlay');
+  btn.classList.toggle('active', annotateMode);
+  help.classList.toggle('active', annotateMode);
+  overlay.style.pointerEvents = annotateMode ? 'auto' : 'none';
+  updateLandmarkList();
+}
+
+function updateLandmarkList() {
+  const container = document.getElementById('landmarkList');
+  container.innerHTML = '';
+  LANDMARK_NAMES.forEach(lm => {
+    const placed = currentLandmarks.find(l => l.name === lm.id);
+    const tag = document.createElement('span');
+    tag.className = 'lm-tag ' + (placed ? 'done' : 'pending');
+    tag.textContent = placed ? '✓ ' + lm.label : '○ ' + lm.label;
+    container.appendChild(tag);
+  });
+}
+
+function handleAnnotateClick(e) {
+  const img = document.getElementById('viewerImage');
+  if (!img) return;
+  const rect = img.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * 100;
+  const y = (e.clientY - rect.top) / rect.height * 100;
+  if (x < 0 || x > 100 || y < 0 || y > 100) return;
+
+  // Find next unplaced landmark
+  const next = LANDMARK_NAMES.find(lm => !currentLandmarks.find(l => l.name === lm.id));
+  if (!next) return;
+
+  currentLandmarks.push({ name: next.id, x, y });
+  renderLandmarks();
+  updateLandmarkList();
+}
+
+function renderLandmarks() {
+  const overlay = document.getElementById('landmarkOverlay');
+  overlay.innerHTML = '';
+  currentLandmarks.forEach(lm => {
+    const def = LANDMARK_NAMES.find(d => d.id === lm.name);
+    const el = document.createElement('div');
+    el.className = 'landmark-point';
+    el.style.left = lm.x + '%';
+    el.style.top = lm.y + '%';
+    el.style.color = def ? def.color : '#fff';
+    el.style.borderColor = def ? def.color : '#fff';
+    el.dataset.label = def ? def.label : lm.name;
+    overlay.appendChild(el);
+  });
+}
+
+function clearLandmarks() {
+  currentLandmarks = [];
+  renderLandmarks();
+  updateLandmarkList();
+  hideAnalysis();
+}
+
+async function submitLandmarks() {
+  const scan = currentScans[currentScanIndex];
+  if (!scan) return;
+  const payload = currentLandmarks.map(l => ({ name: l.name, x: l.x, y: l.y }));
+  const res = await api(`/api/scans/${scan.id}/landmarks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res) { alert('Failed to save landmarks. Is the backend running?'); return; }
+  await runAnalysis();
+  toggleAnnotate();
+}
+
+// ───────────────────────────── Analysis ─────────────────────────────
+async function runAnalysis() {
+  const scan = currentScans[currentScanIndex];
+  if (!scan) return;
+  const data = await api(`/api/scans/${scan.id}/analyze`, { method: 'POST' });
+  if (!data) { alert('Analysis failed. Ensure landmarks are placed and backend is running.'); return; }
+  displayMeasurements(data.measurements);
+  displayAnalysis(data.analysis);
+}
+
+function displayMeasurements(measurements) {
+  const panel = document.getElementById('measurementPanel');
+  const list = document.getElementById('measurementList');
+  list.innerHTML = '';
+  measurements.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'measurement-row';
+    const name = m.metric.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    row.innerHTML = `
+      <span class="metric-name">${name}</span>
+      <span class="metric-value">${m.value}${m.unit}</span>
+      <span class="metric-sev ${m.severity}">${m.severity}</span>
+    `;
+    list.appendChild(row);
+  });
+  panel.style.display = 'block';
+}
+
+function displayAnalysis(analysis) {
+  const card = document.getElementById('analysisCard');
+  const title = document.getElementById('analysisTitle');
+  const score = document.getElementById('analysisScore');
+  const recs = document.getElementById('analysisRecs');
+
+  card.className = 'analysis-card ' + analysis.overall_severity;
+  title.innerHTML = `ANALYSIS: ${analysis.overall_severity.toUpperCase()} <span class="score" style="color:var(--${analysis.overall_severity === 'normal' ? 'sickbay-green' : analysis.overall_severity === 'mild' ? 'alert-orange' : analysis.overall_severity === 'moderate' ? 'red-alert' : 'red-alert'})">${analysis.score}</span>`;
+
+  recs.innerHTML = '';
+  analysis.recommendations.forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = r;
+    recs.appendChild(li);
+  });
+  card.style.display = 'block';
+}
+
+// ───────────────────────────── Severity Reference ─────────────────────────────
+function setSeverity(sev) {
+  currentSeverity = sev;
+  document.querySelectorAll('.sev-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector('.sev-btn[data-sev="' + sev + '"]')?.classList.add('active');
+  document.getElementById('severityBadge').className = 'severity-badge badge-' + sev;
+  document.getElementById('severityBadge').textContent = 'DIAGNOSTIC: ' + sev.toUpperCase();
+  document.getElementById('refImage').src = REF_IMAGES[sev] || REF_IMAGES.normal;
+}
+
+// ───────────────────────────── Navigation ─────────────────────────────
+function changeHoof() {
+  currentHoof = document.getElementById('hoofSelect').value;
+  loadScans();
+}
+
+function changeDate(dir) {
+  const newIndex = currentScanIndex + dir;
+  if (newIndex >= 0 && newIndex < currentScans.length) {
+    currentScanIndex = newIndex;
+    renderScan();
+  }
+}
+
+document.getElementById('horseSelect').addEventListener('change', (e) => {
+  currentHorseId = parseInt(e.target.value);
+  loadScans();
+});
+
+// ───────────────────────────── Modals ─────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function createHorse() {
+  const name = document.getElementById('newHorseName').value;
+  const owner = document.getElementById('newHorseOwner').value;
+  const breed = document.getElementById('newHorseBreed').value;
+  if (!name) { alert('Name is required'); return; }
+  const res = await api('/api/horses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, owner, breed })
+  });
+  if (res) {
+    closeModal('horseModal');
+    await loadHorses();
+    document.getElementById('horseSelect').value = res.id;
+    currentHorseId = res.id;
+    loadScans();
+  }
+}
+
+async function createScan() {
+  const horseId = document.getElementById('scanHorseSelect').value;
+  const hoof = document.getElementById('scanHoofSelect').value;
+  const date = document.getElementById('scanDate').value;
+  const view = document.getElementById('scanView').value;
+  const modality = document.getElementById('scanModality').value;
+  const desc = document.getElementById('scanDesc').value;
+  const fileInput = document.getElementById('scanFile');
+  if (!horseId || !date) { alert('Horse and date are required'); return; }
+
+  const form = new FormData();
+  form.append('horse_id', horseId);
+  form.append('hoof', hoof);
+  form.append('scan_date', date);
+  form.append('view', view);
+  form.append('modality', modality);
+  form.append('description', desc);
+  if (fileInput.files[0]) form.append('file', fileInput.files[0]);
+
+  const res = await fetch(`${API_BASE}/api/scans`, { method: 'POST', body: form });
+  if (!res.ok) { alert('Upload failed'); return; }
+  closeModal('scanModal');
+  if (parseInt(horseId) === currentHorseId && hoof === currentHoof) {
+    await loadScans();
+    currentScanIndex = currentScans.length - 1;
+    renderScan();
+  }
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('active'); });
+});
+
+// ───────────────────────────── Init ─────────────────────────────
+async function init() {
+  await checkApi();
+  if (apiOnline) {
+    await loadHorses();
+  } else {
+    // Fallback: show a message about starting the backend
+    document.getElementById('viewerContent').innerHTML = `
+      <div class="upload-zone">
+        <div class="upload-icon">⚠</div>
+        <p>Backend API is offline</p>
+        <small>Start the backend: <code>cd backend && uvicorn app.main:app --reload</code></small>
+      </div>`;
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Byrock Hoof X-Ray Portal — Backend
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+pydantic==2.7.4
+python-multipart==0.0.9
+aiosqlite==0.20.0
+pillow==10.3.0
+opencv-python-headless==4.10.0.82
+numpy==1.26.4
+pydicom==2.4.4
+python-dateutil==2.9.0
+aiofiles==23.2.1
