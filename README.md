@@ -125,6 +125,8 @@ python -m http.server 4179
 | GET | `/api/norms` | Population norms |
 | GET | `/api/horses/{id}/timeline` | Full timeline |
 
+When this service is deployed behind the bundled Nginx container, the PTP portal should use `VITE_COMPUTE_API_URL=/compute`. Nginx proxies `/compute/*` to the FastAPI container while preserving the FastAPI `/api/*` routes, so frontend calls such as `/compute/api/health` reach the backend at `/api/health`.
+
 ## 🧬 EquiSim Integration
 
 This platform incorporates statistical shape modeling principles from [EquiSim](https://github.com/jvhoutte/equisim) (Van Houtte et al., Frontiers in Veterinary Science, 2021). While EquiSim is a 3D CT articulation model, we extracted the relevant biometric population distributions (toe angle, heel angle, palmar angle, capsule deviation, sole depth relationships) and adapted them for 2D radiograph deviation analysis.

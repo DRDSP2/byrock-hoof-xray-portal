@@ -971,7 +971,17 @@
 <script type="module" src="./overlay.js"></script>
 <script>
 // ───────────────────────────── Configuration ─────────────────────────────
-const API_BASE = 'http://localhost:8000';
+// Auto-detect API base: if frontend is served from /frontend/ on same origin,
+// use '/api'. Otherwise fall back to localhost backend.
+const API_BASE = (() => {
+  const sameOrigin = window.location.pathname.startsWith('/frontend');
+  if (sameOrigin) {
+    // We're being served behind a proxy (e.g. Nginx) on same domain
+    return '';
+  }
+  // Development: backend on separate port
+  return 'http://localhost:8000';
+})();
 const LANDMARK_NAMES = [
   { id: 'coronary_band', label: 'Coronary Band', color: '#00f0ff' },
   { id: 'toe_tip', label: 'Toe Tip', color: '#ff4757' },
@@ -1107,6 +1117,12 @@ function renderTimeline() {
   });
 }
 
+function resolveImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('/uploads/')) return API_BASE + url;
+  return url;
+}
+
 function renderScan() {
   const viewer = document.getElementById('viewerContent');
   const scan = currentScans[currentScanIndex];
@@ -1145,7 +1161,7 @@ function renderScan() {
   frame.className = 'viewer-frame';
   const img = document.createElement('img');
   img.id = 'viewerImage';
-  img.src = scan.image_url || scan.imageSrc || '';
+  img.src = resolveImageUrl(scan.image_url || scan.imageSrc);
   img.alt = scan.description || 'Scan';
   img.style.maxWidth = '100%';
   img.style.maxHeight = '100%';
@@ -1494,13 +1510,21 @@ async function createScan() {
   form.append('description', desc);
   if (fileInput.files[0]) form.append('file', fileInput.files[0]);
 
-  const res = await fetch(`${API_BASE}/api/scans`, { method: 'POST', body: form });
-  if (!res.ok) { alert('Upload failed'); return; }
-  closeModal('scanModal');
-  if (parseInt(horseId) === currentHorseId && hoof === currentHoof) {
-    await loadScans();
-    currentScanIndex = currentScans.length - 1;
-    renderScan();
+  try {
+    const res = await fetch(`${API_BASE}/api/scans`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.text().catch(() => 'Unknown error');
+      alert(`Upload failed: ${err}`);
+      return;
+    }
+    closeModal('scanModal');
+    if (parseInt(horseId) === currentHorseId && hoof === currentHoof) {
+      await loadScans();
+      currentScanIndex = currentScans.length - 1;
+      renderScan();
+    }
+  } catch (e) {
+    alert('Upload failed. Is the backend running? (cd backend && uvicorn app.main:app --reload)');
   }
 }
 
