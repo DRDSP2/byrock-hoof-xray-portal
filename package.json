@@ -1,0 +1,11 @@
+{
+  "name": "byrock-hoof-xray-portal",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node frontend/tests/rotation-pipeline.test.mjs",
+    "build": "node scripts/build-static.mjs",
+    "deploy:ipfs": "node scripts/deploy-ipfs.mjs"
+  }
+}

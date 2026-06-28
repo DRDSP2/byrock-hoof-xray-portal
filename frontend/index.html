@@ -303,6 +303,51 @@
     border: 1px solid rgba(0,240,255,0.2);
   }
 
+  .rotation-overlay-svg {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .rotation-info {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 11;
+    min-width: 210px;
+    max-width: 280px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(10, 15, 26, 0.92);
+    border: 1px solid rgba(0, 240, 255, 0.18);
+    color: var(--starlight);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.45;
+    box-shadow: 0 0 20px rgba(0,0,0,0.45);
+    display: none;
+  }
+  .rotation-info.active { display: block; }
+  .rotation-info.critical {
+    color: #fff;
+    border-color: rgba(255, 71, 87, 0.55);
+    box-shadow: var(--glow-red);
+  }
+  .rotation-info.safe {
+    border-color: rgba(46, 213, 115, 0.45);
+    box-shadow: var(--glow-green);
+  }
+  .rotation-info strong {
+    display: block;
+    color: inherit;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
   .annotator-help {
     position: absolute;
     bottom: 14px;
@@ -805,10 +850,13 @@
         <div class="img-btn" onclick="adjustBrightness(10)" title="Brighter">☀</div>
         <div class="img-btn" onclick="adjustBrightness(-10)" title="Darker">☾</div>
         <div class="img-btn" id="annotateBtn" onclick="toggleAnnotate()" title="Annotate Landmarks">📍</div>
+        <div class="img-btn" onclick="runRotationDetection()" title="Detect P3 Rotation">↻</div>
+        <div class="img-btn" onclick="loadRotationDemo()" title="Demo 5.2° Rotation">◎</div>
         <div class="img-btn" onclick="runAnalysis()" title="Run Analysis">🔬</div>
       </div>
       <div id="viewerContent" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;">
       </div>
+      <div class="rotation-info" id="rotationInfo"></div>
       <div class="landmark-overlay" id="landmarkOverlay"></div>
       <div class="annotator-help" id="annotatorHelp">
         <strong>Landmark Annotation Mode</strong> — Click on the image to place each required point.
@@ -919,6 +967,8 @@
   </div>
 </div>
 
+<script type="module" src="./image-processor.js"></script>
+<script type="module" src="./overlay.js"></script>
 <script>
 // ───────────────────────────── Configuration ─────────────────────────────
 const API_BASE = 'http://localhost:8000';
@@ -939,6 +989,27 @@ const REF_IMAGES = {
   moderate: 'assets/reference-images/reference-moderate.jpg',
   severe: 'assets/reference-images/reference-severe.jpg'
 };
+const ROTATION_DEMO_SCAN = {
+  id: 'demo-rotation',
+  horse_id: 'demo',
+  hoof: 'FR',
+  scan_date: new Date().toISOString().slice(0, 10),
+  view: 'DP',
+  modality: 'DEMO',
+  description: 'Demo validation case: 5.2° P3 rotation',
+  imageSrc: 'assets/demo/rotation-demo.svg',
+  demo: true,
+  landmarks: [
+    { name: 'coronary_band', x: 40, y: 20 },
+    { name: 'toe_tip', x: 40, y: 80 },
+    { name: 'extensor_process', x: 55, y: 25 },
+    { name: 'p3_tip', x: 60, y: 80 },
+    { name: 'p3_heel', x: 36, y: 68 },
+    { name: 'toe_ground', x: 72, y: 90 },
+    { name: 'heel_ground', x: 24, y: 90 }
+  ]
+};
+const PATIENT_STORAGE_KEYS = ['patient-data', 'patientData', 'currentHorse', 'currentScan', 'scan-cache', 'xray-cache'];
 
 // ───────────────────────────── State ─────────────────────────────
 let horses = [];
@@ -952,6 +1023,7 @@ let isDragging = false, startX, startY;
 let annotateMode = false;
 let currentLandmarks = [];
 let apiOnline = false;
+let currentRotation = null;
 
 // ───────────────────────────── API Helpers ─────────────────────────────
 async function api(path, opts = {}) {
@@ -1053,6 +1125,7 @@ function renderScan() {
     viewer.innerHTML = '<div class="upload-zone"><div class="upload-icon">🩻</div><p>No scan available for this hoof</p><small>Upload a scan using the + Scan button</small></div>';
     clearLandmarks();
     hideAnalysis();
+    clearRotationInfo();
     return;
   }
 
@@ -1082,8 +1155,16 @@ function renderScan() {
   viewer.appendChild(frame);
   resetView();
 
-  // Load existing landmarks if any
-  loadScanLandmarks(scan.id);
+  clearRotationInfo();
+
+  if (scan.demo) {
+    currentLandmarks = scan.landmarks.map(l => ({ ...l }));
+    renderLandmarks();
+    displayRotation(window.ByrockRotation.calculateRotationFromLandmarks(currentLandmarks, getRotationOptions(scan)));
+  } else {
+    // Load existing landmarks if any
+    loadScanLandmarks(scan.id);
+  }
   hideAnalysis();
   renderTimeline();
 }
@@ -1091,6 +1172,14 @@ function renderScan() {
 function hideAnalysis() {
   document.getElementById('analysisCard').style.display = 'none';
   document.getElementById('measurementPanel').style.display = 'none';
+}
+
+function clearRotationInfo() {
+  currentRotation = null;
+  const info = document.getElementById('rotationInfo');
+  info.className = 'rotation-info';
+  info.innerHTML = '';
+  window.ByrockRotationOverlay?.clearRotationOverlay();
 }
 
 async function loadScanLandmarks(scanId) {
@@ -1196,6 +1285,7 @@ function clearLandmarks() {
   renderLandmarks();
   updateLandmarkList();
   hideAnalysis();
+  clearRotationInfo();
 }
 
 async function submitLandmarks() {
@@ -1220,6 +1310,63 @@ async function runAnalysis() {
   if (!data) { alert('Analysis failed. Ensure landmarks are placed and backend is running.'); return; }
   displayMeasurements(data.measurements);
   displayAnalysis(data.analysis);
+}
+
+function getRotationOptions(scan = currentScans[currentScanIndex]) {
+  const horse = horses.find(h => h.id === scan?.horse_id) || {};
+  return {
+    view: scan?.view || 'Lateral',
+    breed: horse.breed || '',
+    landmarks: currentLandmarks
+  };
+}
+
+async function runRotationDetection() {
+  const scan = currentScans[currentScanIndex];
+  const img = document.getElementById('viewerImage');
+  if (!scan || !img) return;
+  try {
+    const options = getRotationOptions(scan);
+    const rotation = currentLandmarks.length
+      ? window.ByrockRotation.calculateRotationFromLandmarks(currentLandmarks, options)
+      : await window.ByrockRotation.detectLaminitisRotation(img, options);
+    if (!currentLandmarks.length && rotation.landmarks) {
+      currentLandmarks = [
+        { name: 'coronary_band', ...rotation.landmarks.wallStart },
+        { name: 'toe_tip', ...rotation.landmarks.wallEnd },
+        { name: 'extensor_process', ...rotation.landmarks.boneStart },
+        { name: 'p3_tip', ...rotation.landmarks.boneEnd }
+      ];
+      renderLandmarks();
+      updateLandmarkList();
+    }
+    displayRotation(rotation);
+  } catch (error) {
+    displayRotation({ status: 'needs_landmarks', message: error.message, critical: false, confidence: 0 });
+  }
+}
+
+function displayRotation(rotation) {
+  currentRotation = rotation;
+  const info = document.getElementById('rotationInfo');
+  const frame = document.getElementById('viewerFrame');
+  info.className = 'rotation-info active ' + (rotation.critical ? 'critical' : 'safe');
+  if (rotation.status === 'needs_landmarks') {
+    info.className = 'rotation-info active';
+    info.innerHTML = `<strong>ROTATION PENDING</strong>${rotation.message || 'Place landmarks to calculate P3 rotation.'}`;
+    window.ByrockRotationOverlay?.clearRotationOverlay();
+    return;
+  }
+  const state = rotation.critical ? 'CRITICAL ROTATION' : 'ROTATION IN RANGE';
+  info.innerHTML = `<strong>${state}</strong>${rotation.rotation.toFixed(1)}° ${rotation.thresholdMode} rotation<br>Threshold: ${rotation.threshold.toFixed(1)}° · Confidence: ${Math.round(rotation.confidence * 100)}%`;
+  window.ByrockRotationOverlay?.renderRotationOverlay(frame, rotation);
+}
+
+function loadRotationDemo() {
+  currentScans = [ROTATION_DEMO_SCAN, ...currentScans.filter(scan => !scan.demo)];
+  currentScanIndex = 0;
+  renderTimeline();
+  renderScan();
 }
 
 function displayMeasurements(measurements) {
@@ -1285,6 +1432,15 @@ function changeDate(dir) {
 document.getElementById('horseSelect').addEventListener('change', (e) => {
   currentHorseId = parseInt(e.target.value);
   loadScans();
+});
+
+window.addEventListener('beforeunload', () => {
+  if (location.protocol === 'https:' || !['localhost', '127.0.0.1', ''].includes(location.hostname)) {
+    PATIENT_STORAGE_KEYS.forEach(key => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+  }
 });
 
 // ───────────────────────────── Modals ─────────────────────────────

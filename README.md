@@ -31,6 +31,24 @@ byrock-hoof-xray-portal/
 
 ## 🐎 Quick Start
 
+### Rotation Detection
+
+The frontend includes a browser-side P3 rotation overlay for laminitis review:
+
+- Click `↻` in the scan viewer to calculate rotation from placed landmarks, or attempt deterministic edge-based landmark detection when landmarks are absent.
+- Click `◎` to load the synthetic 5.2° demo case for vet-facing validation without patient images.
+- Default alert thresholds are 5° for coronal/DP views and 3° for sagittal/lateral views. Draft breeds use 7° coronal and 5° sagittal defaults.
+- These thresholds are configurable in `frontend/image-processor.js` and require veterinary validation before clinical use.
+- Production page unload clears patient/scan keys from browser storage as a privacy safeguard; this is not a HIPAA compliance claim.
+
+```bash
+npm test
+npm run build
+npm run deploy:ipfs
+```
+
+`deploy:ipfs` uses the local IPFS CLI and reports the generated CID. If the CLI or pinning credentials are missing, configure those first and rerun the command.
+
 ### Option A: Docker (Recommended)
 
 ```bash
