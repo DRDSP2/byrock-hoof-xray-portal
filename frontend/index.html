@@ -1306,7 +1306,16 @@ async function submitLandmarks() {
 async function runAnalysis() {
   const scan = currentScans[currentScanIndex];
   if (!scan) return;
-  const data = await api(`/api/scans/${scan.id}/analyze`, { method: 'POST' });
+  const data = await api('/api/compute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      image: scan.image_url || null,
+      landmarks: currentLandmarks,
+      pixel_spacing_x: scan.pixel_spacing_x || null,
+      pixel_spacing_y: scan.pixel_spacing_y || null
+    })
+  });
   if (!data) { alert('Analysis failed. Ensure landmarks are placed and backend is running.'); return; }
   displayMeasurements(data.measurements);
   displayAnalysis(data.analysis);

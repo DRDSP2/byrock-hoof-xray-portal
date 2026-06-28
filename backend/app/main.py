@@ -192,6 +192,17 @@ class NormOut(BaseModel):
     moderate_range: List[float]
     severe_range: List[float]
 
+class ComputeRequest(BaseModel):
+    image: Optional[str] = None
+    landmarks: List[LandmarkCreate]
+    pixel_spacing_x: Optional[float] = None
+    pixel_spacing_y: Optional[float] = None
+
+class ComputeResponse(BaseModel):
+    measurements: List[Dict[str, Any]]
+    analysis: Dict[str, Any]
+    auth: str = "supabase_rls"
+
 # ───────────────────────────── Population Norms (EquiSim + Veterinary Lit) ─────────────────────────────
 # Sources: EquiSim (Van Houtte 2021), Stashak's Lameness in Horses, Turner 2003, RVC guidelines
 POPULATION_NORMS = {
@@ -499,6 +510,22 @@ async def process_upload(file: UploadFile, scan_id: int) -> tuple[str, Optional[
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "2.0.0"}
+
+@app.post("/api/compute", response_model=ComputeResponse)
+async def compute_measurements(data: ComputeRequest):
+    landmarks = [lm.dict() for lm in data.landmarks]
+    if not landmarks:
+        raise HTTPException(400, "No landmarks supplied. Provide raw image context plus landmarks.")
+
+    measurements = compute_all_measurements(landmarks, data.pixel_spacing_x, data.pixel_spacing_y)
+    if not measurements:
+        raise HTTPException(400, "Insufficient landmarks supplied for measurement computation.")
+
+    return {
+        "measurements": measurements,
+        "analysis": run_analysis(0, measurements),
+        "auth": "supabase_rls",
+    }
 
 @app.post("/api/horses", response_model=HorseOut)
 async def create_horse(data: HorseCreate):
