@@ -95,6 +95,21 @@
     animation: pulse-dot 2s infinite ease-in-out;
   }
   .status-dot.offline { background: var(--red-alert); box-shadow: 0 0 8px var(--red-alert); }
+  .diagnostic-banner {
+    display: none;
+    margin: 10px 12px 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 159, 67, 0.45);
+    border-radius: 12px;
+    background: rgba(255, 159, 67, 0.12);
+    color: #ffd7a3;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.45;
+    position: relative;
+    z-index: 20;
+  }
+  .diagnostic-banner.active { display: block; }
   @keyframes pulse-dot {
     0%, 100% { opacity: 0.6; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.3); }
@@ -799,6 +814,8 @@
   </div>
 </div>
 
+<div class="diagnostic-banner" id="diagnosticBanner" role="alert"></div>
+
 <div class="main-container">
 
   <!-- LEFT PANEL: Reference + Analysis -->
@@ -1032,6 +1049,34 @@ let currentLandmarks = [];
 let apiOnline = false;
 let currentRotation = null;
 
+function showDiagnostic(message, error = null) {
+  console.error(message, error || '');
+  const banner = document.getElementById('diagnosticBanner');
+  if (!banner) return;
+  const details = error?.message || error || '';
+  banner.textContent = details ? `${message}: ${details}` : message;
+  banner.classList.add('active');
+}
+
+function renderViewerMessage(icon, title, detail = '') {
+  const viewer = document.getElementById('viewerContent');
+  if (!viewer) return;
+  viewer.innerHTML = `
+    <div class="upload-zone">
+      <div class="upload-icon">${icon}</div>
+      <p>${title}</p>
+      ${detail ? `<small>${detail}</small>` : ''}
+    </div>`;
+}
+
+window.addEventListener('error', (event) => {
+  showDiagnostic('X-ray tab failed to render', event.error || event.message);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  showDiagnostic('X-ray tab async error', event.reason);
+});
+
 // ───────────────────────────── API Helpers ─────────────────────────────
 async function api(path, opts = {}) {
   try {
@@ -1039,7 +1084,7 @@ async function api(path, opts = {}) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
-    console.warn('API error:', e);
+    showDiagnostic(`API request failed (${path})`, e);
     return null;
   }
 }
@@ -1152,12 +1197,16 @@ function renderScan() {
   frame.className = 'viewer-frame';
   const img = document.createElement('img');
   img.id = 'viewerImage';
-  img.src = scan.image_url || scan.imageSrc || '';
+  img.src = resolveImageUrl(scan.image_url || scan.imageSrc || '');
   img.alt = scan.description || 'Scan';
   img.style.maxWidth = '100%';
   img.style.maxHeight = '100%';
   img.style.objectFit = 'contain';
   img.style.cursor = 'grab';
+  img.onerror = () => {
+    showDiagnostic('Scan image failed to load', img.src || 'missing image URL');
+    renderViewerMessage('⚠', 'Scan image could not be loaded', 'Check the upload path or storage/proxy route.');
+  };
   frame.appendChild(img);
   viewer.appendChild(frame);
   resetView();
@@ -1522,17 +1571,14 @@ async function init() {
   if (apiOnline) {
     await loadHorses();
   } else {
-    // Fallback: show a message about starting the backend
-    document.getElementById('viewerContent').innerHTML = `
-      <div class="upload-zone">
-        <div class="upload-icon">⚠</div>
-        <p>Backend API is offline</p>
-        <small>Start the backend: <code>cd backend && uvicorn app.main:app --reload</code></small>
-      </div>`;
+    renderViewerMessage('⚠', 'Backend API is offline', 'Check /api/health and the production Nginx proxy.');
   }
 }
 
-init();
+init().catch((error) => {
+  showDiagnostic('X-ray tab startup failed', error);
+  renderViewerMessage('⚠', 'X-ray tab startup failed', error?.message || 'Open the browser console for details.');
+});
 </script>
 
 </body>
