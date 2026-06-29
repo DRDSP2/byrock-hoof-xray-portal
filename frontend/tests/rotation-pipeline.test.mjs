@@ -34,6 +34,10 @@ const frontendHtml = readFileSync(new URL('../index.html', import.meta.url), 'ut
 assert.match(frontendHtml, /const API_BASE = \(\(\) => \{/);
 assert.match(frontendHtml, /api\('\/api\/analyze'/);
 assert.doesNotMatch(frontendHtml, /const API_BASE = 'http:\/\/localhost:8000'/);
+assert.match(frontendHtml, /function asArray\(value\)/);
+assert.match(frontendHtml, /currentScans = asArray\(data\);/);
+assert.match(frontendHtml, /currentLandmarks = asArray\(data\)\.map/);
+assert.match(frontendHtml, /No scan available for this hoof/);
 
 const nginxConfig = readFileSync(new URL('../../nginx/nginx.conf', import.meta.url), 'utf8');
 assert.match(nginxConfig, /location = \/compute/);

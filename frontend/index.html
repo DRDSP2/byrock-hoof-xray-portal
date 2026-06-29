@@ -1049,6 +1049,14 @@ let currentLandmarks = [];
 let apiOnline = false;
 let currentRotation = null;
 
+function asArray(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+function firstPresent(...values) {
+  return values.find(value => value !== null && value !== undefined && value !== '') ?? '-';
+}
+
 function showDiagnostic(message, error = null) {
   console.error(message, error || '');
   const banner = document.getElementById('diagnosticBanner');
@@ -1108,33 +1116,37 @@ async function checkApi() {
 // ───────────────────────────── Data Loading ─────────────────────────────
 async function loadHorses() {
   const data = await api('/api/horses');
-  if (!data) return;
-  horses = data;
+  horses = asArray(data);
   const sel = document.getElementById('horseSelect');
   const scanSel = document.getElementById('scanHorseSelect');
   sel.innerHTML = '';
   scanSel.innerHTML = '';
   horses.forEach(h => {
     const opt = document.createElement('option');
-    opt.value = h.id;
-    opt.textContent = h.name;
+    opt.value = firstPresent(h.id, '');
+    opt.textContent = firstPresent(h.name, 'Unnamed horse');
     sel.appendChild(opt);
     const opt2 = document.createElement('option');
-    opt2.value = h.id;
-    opt2.textContent = h.name;
+    opt2.value = opt.value;
+    opt2.textContent = opt.textContent;
     scanSel.appendChild(opt2);
   });
   if (horses.length > 0) {
     currentHorseId = horses[0].id;
     sel.value = currentHorseId;
     await loadScans();
+  } else {
+    currentHorseId = null;
+    currentScans = [];
+    renderTimeline();
+    renderScan();
   }
 }
 
 async function loadScans() {
   if (!currentHorseId) return;
   const data = await api(`/api/scans?horse_id=${currentHorseId}&hoof=${currentHoof}`);
-  currentScans = data || [];
+  currentScans = asArray(data);
   currentScanIndex = 0;
   renderTimeline();
   renderScan();
@@ -1147,8 +1159,8 @@ function renderTimeline() {
   currentScans.forEach((s, i) => {
     const dot = document.createElement('div');
     dot.className = 'timeline-dot' + (i === currentScanIndex ? ' active' : '');
-    const d = new Date(s.scan_date);
-    dot.dataset.date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const d = s.scan_date ? new Date(s.scan_date) : null;
+    dot.dataset.date = d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Unknown';
     dot.onclick = () => { currentScanIndex = i; renderScan(); };
     tl.appendChild(dot);
     if (i < currentScans.length - 1) {
@@ -1181,15 +1193,15 @@ function renderScan() {
     return;
   }
 
-  const d = new Date(scan.scan_date);
-  document.getElementById('dateDisplay').textContent = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const d = scan.scan_date ? new Date(scan.scan_date) : null;
+  document.getElementById('dateDisplay').textContent = d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Unknown date';
   document.getElementById('dateMeta').textContent = `Scan ${currentScanIndex + 1} of ${currentScans.length}`;
-  document.getElementById('infoView').textContent = scan.view;
-  document.getElementById('infoModality').textContent = scan.modality || '-';
-  document.getElementById('infoDesc').textContent = scan.description || '-';
-  document.getElementById('infoId').textContent = (horses.find(h => h.id === scan.horse_id)?.name || scan.horse_id);
-  document.getElementById('rightPanelTitle').textContent = (horses.find(h => h.id === scan.horse_id)?.name || 'Patient');
-  document.getElementById('rightPanelMeta').textContent = scan.description || `${scan.hoof} ${scan.view}`;
+  document.getElementById('infoView').textContent = firstPresent(scan.view);
+  document.getElementById('infoModality').textContent = firstPresent(scan.modality);
+  document.getElementById('infoDesc').textContent = firstPresent(scan.description);
+  document.getElementById('infoId').textContent = firstPresent(horses.find(h => h.id === scan.horse_id)?.name, scan.horse_id);
+  document.getElementById('rightPanelTitle').textContent = firstPresent(horses.find(h => h.id === scan.horse_id)?.name, 'Patient');
+  document.getElementById('rightPanelMeta').textContent = firstPresent(scan.description, `${firstPresent(scan.hoof, currentHoof)} ${firstPresent(scan.view)}`);
 
   viewer.innerHTML = '';
   const frame = document.createElement('div');
@@ -1214,7 +1226,7 @@ function renderScan() {
   clearRotationInfo();
 
   if (scan.demo) {
-    currentLandmarks = scan.landmarks.map(l => ({ ...l }));
+    currentLandmarks = asArray(scan.landmarks).map(l => ({ ...l }));
     renderLandmarks();
     displayRotation(window.ByrockRotation.calculateRotationFromLandmarks(currentLandmarks, getRotationOptions(scan)));
   } else {
@@ -1240,13 +1252,12 @@ function clearRotationInfo() {
 
 async function loadScanLandmarks(scanId) {
   const data = await api(`/api/scans/${scanId}/landmarks`);
-  if (!data) { currentLandmarks = []; renderLandmarks(); return; }
-  currentLandmarks = data.map(l => ({ name: l.name, x: l.x, y: l.y }));
+  currentLandmarks = asArray(data).map(l => ({ name: l.name, x: l.x, y: l.y }));
   renderLandmarks();
   // If we have landmarks, also load measurements
   const measurements = await api(`/api/scans/${scanId}/measurements`);
   const analysis = await api(`/api/scans/${scanId}/analysis`).catch(() => null);
-  if (measurements && measurements.length) displayMeasurements(measurements);
+  if (asArray(measurements).length) displayMeasurements(asArray(measurements));
   if (analysis) displayAnalysis(analysis);
 }
 
