@@ -60,6 +60,8 @@ docker-compose up --build
 # API docs: http://localhost:8000/docs
 ```
 
+The Docker frontend proxies `/compute`, `/api/*`, and `/uploads/*` to the FastAPI backend so browser requests use the same origin and never fall through to the static HTML app shell.
+
 ### Option B: Local Development
 
 ```bash
@@ -114,6 +116,7 @@ python -m http.server 4179
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
+| POST | `/compute` | Stateless landmark measurement API |
 | POST | `/api/horses` | Create horse |
 | GET | `/api/horses` | List horses |
 | POST | `/api/scans` | Upload scan (JPEG/PNG/DICOM) |

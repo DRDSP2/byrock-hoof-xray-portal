@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { calculateRotationFromLandmarks, getThresholds } from '../image-processor.js';
 
 const baseLandmarks = [
@@ -28,5 +29,18 @@ assert.equal(draftThresholds.active, 7);
 const missing = calculateRotationFromLandmarks([{ name: 'toe_tip', x: 1, y: 1 }]);
 assert.equal(missing.status, 'needs_landmarks');
 assert.ok(missing.missing.includes('coronary_band'));
+
+const frontendHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+assert.match(frontendHtml, /const API_BASE = \(\(\) => \{/);
+assert.match(frontendHtml, /api\('\/api\/analyze'/);
+assert.doesNotMatch(frontendHtml, /const API_BASE = 'http:\/\/localhost:8000'/);
+
+const nginxConfig = readFileSync(new URL('../../nginx/nginx.conf', import.meta.url), 'utf8');
+assert.match(nginxConfig, /location = \/compute/);
+assert.match(nginxConfig, /proxy_pass http:\/\/byrock-backend:8000\/api\/analyze;/);
+
+const nginxProdConfig = readFileSync(new URL('../../nginx/nginx.prod.conf', import.meta.url), 'utf8');
+assert.match(nginxProdConfig, /location = \/compute/);
+assert.match(nginxProdConfig, /proxy_pass http:\/\/byrock-backend:8000\/api\/analyze;/);
 
 console.log('rotation pipeline tests passed');

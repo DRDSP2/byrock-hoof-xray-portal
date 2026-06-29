@@ -1,48 +1,28 @@
 version: "3.8"
 
 services:
-  nginx:
-    image: nginx:alpine
-    container_name: byrock-nginx
-    ports:
-      - "4179:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-    restart: unless-stopped
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: byrock-backend
-    environment:
-      - FRONTEND_ORIGIN=http://localhost:4179
-      - ALLOWED_ORIGINS=http://localhost:4179
-      - PYTHONUNBUFFERED=1
-      - ENV=production
+    ports:
+      - "8000:8000"
     volumes:
       - ./backend/data:/app/data
-    networks:
-      - byrock-network
+      - ./backend/app:/app/app
+    environment:
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
 
-  # Optional: seed data on first run
-  # seed:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   command: python3 seed_trial_images.py
-  #   volumes:
-  #     - ./backend/data:/app/data
-  #     - ./frontend/assets:/app/assets:ro
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - byrock-network
-
-networks:
-  byrock-network:
-    driver: bridge
+  frontend:
+    image: nginx:alpine
+    container_name: byrock-frontend
+    ports:
+      - "4179:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
