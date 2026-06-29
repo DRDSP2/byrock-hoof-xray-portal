@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: byrock-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      # If you have TLS certs, mount them:
+      # - /etc/letsencrypt/live/byrock.eth.limo/fullchain.pem:/etc/nginx/ssl/cert.pem:ro
+      # - /etc/letsencrypt/live/byrock.eth.limo/privkey.pem:/etc/nginx/ssl/key.pem:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - byrock-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: byrock-backend-prod
+    environment:
+      - FRONTEND_ORIGIN=https://byrock.eth.limo
+      - ALLOWED_ORIGINS=https://byrock.eth.limo,https://*.pages.dev,http://localhost:5173
+      - PYTHONUNBUFFERED=1
+      - ENV=production
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - byrock-network
+
+networks:
+  byrock-network:
+    driver: bridge
